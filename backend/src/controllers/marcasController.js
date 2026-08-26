@@ -1,5 +1,12 @@
 const Marca = require('../models/Marca');
 
+function mensajeError(error) {
+  if (error.errors?.length) {
+    return error.errors.map((e) => e.message).join(', ');
+  }
+  return error.message;
+}
+
 async function listar(req, res) {
   try {
     const marcas = await Marca.findAll();
@@ -14,7 +21,7 @@ async function crear(req, res) {
     const marca = await Marca.create(req.body);
     res.status(201).json(marca);
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    res.status(400).json({ error: mensajeError(error) });
   }
 }
 
