@@ -4,3 +4,25 @@ export async function listarAutos(marcaId) {
   if (!res.ok) throw new Error('Error al obtener autos');
   return res.json();
 }
+
+export async function crearAuto(auto) {
+  const res = await fetch('/api/autos', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(auto),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Error al crear auto');
+  return data;
+}
+
+export async function actualizarAuto(id, auto) {
+  const res = await fetch(`/api/autos/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(auto),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Error al actualizar auto');
+  return data;
+}
