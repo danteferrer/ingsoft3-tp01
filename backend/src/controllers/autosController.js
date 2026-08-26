@@ -1,6 +1,13 @@
 const Auto = require('../models/Auto');
 const Marca = require('../models/Marca');
 
+function mensajeError(error) {
+  if (error.errors?.length) {
+    return error.errors.map((e) => e.message).join(', ');
+  }
+  return error.message;
+}
+
 async function listar(req, res) {
   try {
     const where = {};
@@ -31,7 +38,7 @@ async function crear(req, res) {
     const auto = await Auto.create(req.body);
     res.status(201).json(auto);
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    res.status(400).json({ error: mensajeError(error) });
   }
 }
 
@@ -44,7 +51,7 @@ async function actualizar(req, res) {
     await auto.update(req.body);
     res.json(auto);
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    res.status(400).json({ error: mensajeError(error) });
   }
 }
 

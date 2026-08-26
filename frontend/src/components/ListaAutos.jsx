@@ -3,7 +3,7 @@ import { listarAutos } from '../api/autos'
 import { listarMarcas } from '../api/marcas'
 import FiltroMarca from './FiltroMarca'
 
-function ListaAutos() {
+function ListaAutos({ refreshSignal }) {
   const [autos, setAutos] = useState([])
   const [marcas, setMarcas] = useState([])
   const [marcaId, setMarcaId] = useState('')
@@ -19,7 +19,7 @@ function ListaAutos() {
     listarAutos(marcaId || undefined)
       .then(setAutos)
       .catch((err) => setError(err.message))
-  }, [marcaId])
+  }, [marcaId, refreshSignal])
 
   return (
     <div>
