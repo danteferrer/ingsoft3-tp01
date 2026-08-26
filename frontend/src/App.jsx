@@ -4,16 +4,30 @@ import FormularioAuto from './components/FormularioAuto'
 
 function App() {
   const [refreshSignal, setRefreshSignal] = useState(0)
+  const [autoEditando, setAutoEditando] = useState(null)
+
+  function refrescar() {
+    setRefreshSignal((s) => s + 1)
+  }
 
   function handleGuardado() {
-    setRefreshSignal((s) => s + 1)
+    refrescar()
+    setAutoEditando(null)
   }
 
   return (
     <>
       <h1>AutoColección</h1>
-      <FormularioAuto onGuardado={handleGuardado} />
-      <ListaAutos refreshSignal={refreshSignal} />
+      <FormularioAuto
+        auto={autoEditando}
+        onGuardado={handleGuardado}
+        onCancelar={autoEditando ? () => setAutoEditando(null) : undefined}
+      />
+      <ListaAutos
+        refreshSignal={refreshSignal}
+        onEditar={setAutoEditando}
+        onEliminado={refrescar}
+      />
     </>
   )
 }

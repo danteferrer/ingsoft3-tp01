@@ -25,7 +25,7 @@ function autoAForm(auto) {
   }
 }
 
-function FormularioAuto({ auto, onGuardado }) {
+function FormularioAuto({ auto, onGuardado, onCancelar }) {
   const esEdicion = Boolean(auto)
   const [marcas, setMarcas] = useState([])
   const [form, setForm] = useState(() => autoAForm(auto))
@@ -134,6 +134,11 @@ function FormularioAuto({ auto, onGuardado }) {
       <button type="submit" disabled={guardando}>
         {guardando ? 'Guardando...' : esEdicion ? 'Guardar cambios' : 'Crear auto'}
       </button>
+      {esEdicion && onCancelar && (
+        <button type="button" onClick={onCancelar} disabled={guardando}>
+          Cancelar
+        </button>
+      )}
     </form>
   )
 }
