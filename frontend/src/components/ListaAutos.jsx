@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { listarAutos } from '../api/autos'
+import { listarAutos, eliminarAuto } from '../api/autos'
 import { listarMarcas } from '../api/marcas'
 import FiltroMarca from './FiltroMarca'
 
-function ListaAutos({ refreshSignal }) {
+function ListaAutos({ refreshSignal, onEditar, onEliminado }) {
   const [autos, setAutos] = useState([])
   const [marcas, setMarcas] = useState([])
   const [marcaId, setMarcaId] = useState('')
@@ -21,6 +21,17 @@ function ListaAutos({ refreshSignal }) {
       .catch((err) => setError(err.message))
   }, [marcaId, refreshSignal])
 
+  async function handleEliminar(auto) {
+    const confirmado = window.confirm(`¿Eliminar el auto con patente ${auto.patente}?`)
+    if (!confirmado) return
+    try {
+      await eliminarAuto(auto.id)
+      onEliminado?.()
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
   return (
     <div>
       <h2>Autos</h2>
@@ -35,6 +46,7 @@ function ListaAutos({ refreshSignal }) {
             <th>Patente</th>
             <th>Color</th>
             <th>Kilometraje</th>
+            <th>Acciones</th>
           </tr>
         </thead>
         <tbody>
@@ -46,6 +58,14 @@ function ListaAutos({ refreshSignal }) {
               <td>{auto.patente}</td>
               <td>{auto.color}</td>
               <td>{auto.kilometraje}</td>
+              <td>
+                <button type="button" onClick={() => onEditar?.(auto)}>
+                  Editar
+                </button>{' '}
+                <button type="button" onClick={() => handleEliminar(auto)}>
+                  Eliminar
+                </button>
+              </td>
             </tr>
           ))}
         </tbody>

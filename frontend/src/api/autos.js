@@ -26,3 +26,11 @@ export async function actualizarAuto(id, auto) {
   if (!res.ok) throw new Error(data.error || 'Error al actualizar auto');
   return data;
 }
+
+export async function eliminarAuto(id) {
+  const res = await fetch(`/api/autos/${id}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || 'Error al eliminar auto');
+  }
+}
