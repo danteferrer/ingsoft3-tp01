@@ -210,3 +210,94 @@ aceptarlo, entendiendo qué hacía cada parte antes de seguir a la siguiente tar
 `docker compose ps`) en vez de confiar en que "compila" o en el resumen que reportaba
 Claude Code — varios de los problemas de la sección anterior los encontré
 justamente porque insistí en probar de verdad antes de dar una tarea por cerrada.
+
+## TP3 — Planificación y trazabilidad
+
+### Duración del sprint
+
+Elegí un sprint de **1 semana (28/8 al 4/9)**, alineado exactamente con la ventana
+hasta la defensa P1 (que cubre TP1 a TP4). No tiene sentido medir avance de un sprint
+más largo si para el 4/9 ya tengo que llegar con TP3 y TP4 terminados y defendibles —
+y uno más corto (de un par de días) no alcanza para trabajo real entre sesiones. La
+fecha límite de la materia terminó siendo, en este caso, el límite natural del sprint.
+
+### Límite de WIP
+
+Configuré el límite de la columna "In Progress" en **2**, siguiendo la recomendación
+base de la guía (cantidad de personas + 1; trabajando solo, eso da 2). La razón para
+no dejarlo más alto: trabajo solo, así que si tengo más de dos cosas "en curso" a la
+vez es porque en realidad las estoy dejando a medias para arrancar otra — el límite
+fuerza a cerrar lo que ya empecé antes de abrir algo nuevo (por ejemplo, no arrancar
+una segunda tarea de la historia de CI sin haber mergeado la primera). Si en la
+práctica nunca llego a ocupar las dos columnas, es señal de que el límite quedó alto
+y lo bajaría a 1.
+
+### Diagnóstico de una historia mal escrita
+
+El ejemplo típico ("Como desarrollador quiero crear tabla usuarios") está mal escrita
+porque es una tarea técnica disfrazada de historia: el "usuario" ahí es quien
+programa, no quien recibe valor de negocio, y no tiene un beneficio verificable más
+allá de la implementación en sí misma. Se corrige reformulándola desde el valor que
+recibe alguien real — por ejemplo: "Como usuario de AutoColección quiero que mis
+autos queden guardados de forma persistente, para no perder la información si se
+reinicia el sistema" — ahí sí hay un rol que recibe beneficio, una capacidad
+concreta, y un resultado medible (los datos siguen ahí después de un reinicio).
+
+### Estructura armada
+
+- **Épica** #13 — "Pipeline DevOps completo para mi app", sin criterios de aceptación propios.
+- **Historia** #14 — "CI: build y tests automáticos en cada PR", con 5 criterios de aceptación verificables, vinculada a la épica como sub-issue nativo de GitHub.
+- **Tareas** #15 y #16 — derivadas de la historia, vinculadas como sub-issues de la historia.
+- **Bug** #17 — documentado y cerrado al costado de la jerarquía (no colgado de la historia): el mensaje genérico `"Validation error"` de Sequelize que ya habíamos encontrado y arreglado en TP2, referenciando el commit real que lo corrigió.
+- **Sprint** "Sprint 1" (28/8–4/9), con la historia y sus dos tareas asignadas.
+- **Tablero**: columnas Todo / In Progress / Done, con la automatización nativa de GitHub Projects que mueve un ítem a Done cuando se cierra su issue (verificado con el bug #17: se cerró y pasó a Done solo, sin tocar nada a mano).
+
+### Trazabilidad: tarea → PR → commit → historia → épica
+
+Implementé la tarea #15 (escribir el workflow de CI) en un PR real (#18), con
+`Closes #15` en la descripción. Al mergearlo:
+- la tarea #15 quedó cerrada, con el PR #18 referenciado como lo que la cerró,
+- el PR trae el commit que agrega `.github/workflows/ci.yml`,
+- desde la tarea se navega a la historia #14, y desde ahí a la épica #13.
+
+La segunda tarea (#16, el badge del README) queda abierta a propósito — la historia
+sigue viva, el trabajo continúa en TP4.
+
+### Problemas encontrados y cómo los resolví
+
+1. **Push rechazado por falta de scope `workflow` en el token de `gh`.** Al intentar
+   pushear la rama con el nuevo `.github/workflows/ci.yml`, GitHub rechazó el push:
+   "refusing to allow a Personal Access Token to create or update workflow ... without
+   `workflow` scope". El login inicial de `gh` solo pedía `repo` y `project`. Lo
+   resolví con `gh auth refresh --scopes "repo,project,workflow"`.
+2. **Git seguía usando el token viejo después del refresh.** Aun con el scope nuevo
+   ya emitido, el push seguía fallando con el mismo error, porque el credential
+   helper de Git (`osxkeychain`) tenía cacheada la credencial anterior. Lo resolví
+   invalidándola con `git credential reject` y corriendo `gh auth setup-git` para que
+   Git tomara la credencial actualizada.
+3. **La API de iteraciones de Projects exige un `title` no documentado a simple
+   vista.** Al crear el campo "Sprint" (tipo `ITERATION`) por GraphQL, la primera
+   llamada falló pidiendo un campo `title` dentro de cada iteración — no alcanza con
+   `startDate` y `duration`. El mensaje de error de la propia API fue lo que lo dejó
+   claro.
+4. **El límite de WIP y las automatizaciones del tablero no tienen mutación pública
+   en la API de Projects.** Confirmé por introspección de GraphQL que solo existe
+   `deleteProjectV2Workflow`, sin `create`/`update` equivalente — esa configuración
+   específica (el número del límite en la columna "In Progress") hay que dejarla para
+   la interfaz web, no se puede automatizar por completo.
+
+### Declaración de uso de IA
+
+Usé Claude Code para: escribir el contenido de la épica, la historia (con sus
+criterios de aceptación siguiendo INVEST), las dos tareas y el bug; crear todo eso en
+GitHub vía `gh` y la API de GraphQL (issues, labels, sub-issues nativos, el Project,
+el campo de Sprint, la asignación de ítems); y escribir el workflow de CI de la tarea
+#15, junto con el PR que la cierra.
+
+Verifiqué cada pieza con comandos reales, no dándola por hecha: confirmé la jerarquía
+de sub-issues consultando la API, confirmé que la automatización "cerrado → Done"
+funcionaba de verdad cerrando el bug #17 y mirando que el tablero lo reflejara solo, y
+confirmé que el PR #18 quedó en verde (`gh pr checks`) antes de mergearlo. Las
+decisiones de contenido (qué bug documentar, cómo redactar la historia para que
+cumpliera INVEST, la duración del sprint y el número de WIP) las torné yo, con la
+justificación de cada una escrita arriba.
