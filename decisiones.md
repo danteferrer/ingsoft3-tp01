@@ -137,6 +137,20 @@ corrí el contenedor del frontend suelto, sin ningún backend en la red, y levan
 quejarse (mostrando la interfaz, aunque el listado fallara por falta de datos, como se
 esperaba).
 
+**`healthcheck` vs. `depends_on`:**
+
+Son dos cosas distintas que se complementan. `depends_on` solo controla el **orden de
+arranque** de los contenedores — sin nada más, `docker compose up` levantaría `db` y
+`backend` casi al mismo tiempo, y `backend` fallaría al conectarse porque Postgres
+todavía no terminó de inicializar (el proceso de Postgres arranca mucho antes de que
+esté listo para aceptar conexiones). `healthcheck` es lo que define **qué significa
+"estar listo"** para un contenedor — en este caso, `pg_isready` corriendo cada 5
+segundos dentro de `db`. La combinación que realmente resuelve el problema es
+`depends_on: db: condition: service_healthy`: eso hace que `backend` no arranque
+recién cuando el contenedor de `db` existe, sino cuando su `healthcheck` ya dio OK.
+Sin el `healthcheck`, `depends_on` a secas solo garantiza orden, no que el servicio
+del que dependés ya pueda responder.
+
 ### Problemas encontrados y cómo los resolví
 
 1. **Pérdida de trabajo por confusión de carpetas de trabajo.** En un momento del TP, el
