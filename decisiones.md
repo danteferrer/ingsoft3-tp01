@@ -1,6 +1,8 @@
 # Decisiones — TP1
 
-## 1. Por qué Git no pudo resolver el conflicto solo
+## TP1
+
+### 1. Por qué Git no pudo resolver el conflicto solo
 
 Las ramas `feature/titulo-a` y `feature/titulo-b` nacieron las dos desde `main`, sin
 enterarse una de la otra, y cambiaron la misma línea del `README.md` (el título del
@@ -15,7 +17,7 @@ Para que esto no hubiera pasado, alguna de las dos ramas tendría que haber inte
 los cambios de la otra antes de abrir su propio PR (por ejemplo, actualizándose
 contra `main` después de que A se mergeó), o directamente no tocar la misma línea.
 
-## 2. Problemas que encontré y cómo los solucioné
+### 2. Problemas que encontré y cómo los solucioné
 
 - **Pegar el `.gitignore` directo en la terminal en vez de en un archivo.** Al crear
   el archivo con `touch .gitignore` intenté pegar el contenido en la terminal en
@@ -35,7 +37,7 @@ contra `main` después de que A se mergeó), o directamente no tocar la misma l�
   tipearlo. Lo resolví usando comodines (`Screenshot*4.37.01*.png`) para no depender
   de escribir el nombre completo a mano.
 
-## 3. Declaración de uso de IA
+### 3. Declaración de uso de IA
 
 Usé Claude como guía durante todo el TP: para que me explicara paso a paso cada
 sección de la consigna, me ayudara a interpretar mensajes de error de la terminal
