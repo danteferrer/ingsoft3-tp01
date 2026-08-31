@@ -299,5 +299,97 @@ de sub-issues consultando la API, confirmé que la automatización "cerrado → 
 funcionaba de verdad cerrando el bug #17 y mirando que el tablero lo reflejara solo, y
 confirmé que el PR #18 quedó en verde (`gh pr checks`) antes de mergearlo. Las
 decisiones de contenido (qué bug documentar, cómo redactar la historia para que
-cumpliera INVEST, la duración del sprint y el número de WIP) las torné yo, con la
+cumpliera INVEST, la duración del sprint y el número de WIP) las tomé yo, con la
 justificación de cada una escrita arriba.
+
+## TP4 — CI: Pipelines as Code
+
+### Por qué esos jobs, y por qué en paralelo
+
+Dos jobs, uno por Dockerfile: `build-backend` y `build-frontend`. No inventé un
+tercer job ni until forzado a compartir uno solo — cada imagen tiene su propio
+contexto de build, sus propias dependencias y su propio Dockerfile, así que tiene
+sentido que cada uno viva en su propia máquina de CI. Al no declarar una dependencia
+entre ellos (`needs:`), GitHub Actions los corre en paralelo por defecto: no hay
+ninguna razón para que el build del frontend espere a que termine el del backend, o
+viceversa — son artefactos independientes. Correr en paralelo también acorta el
+tiempo total del pipeline a la mitad, aproximadamente (ambos tardan ~20-50s cada
+uno, corriendo al mismo tiempo en vez de uno detrás del otro).
+
+Lo que **no** comparten entre sí: el filesystem del runner (cada job arranca en una
+máquina limpia y hace su propio `checkout`), y el cache de capas de Docker — cada
+uno usa su propio `scope` (`backend` / `frontend`) precisamente para no pisarse.
+
+### Qué cachea, y qué pasa si el cache desaparece
+
+Cachea las capas de la imagen Docker de cada etapa del build (`cache-from`/
+`cache-to` con `type=gha`), no el código fuente ni `node_modules` directamente —
+eso ya lo cachean las capas del propio Dockerfile (la capa de `COPY package*.json`
++ `RUN npm ci` solo se reinstala si cambia el `package.json`). El cache es puramente
+una optimización de velocidad: si desaparece (por ejemplo, si GitHub lo purga por
+antigüedad, o es la primera corrida), el pipeline no se rompe — Buildx simplemente
+reconstruye todas las capas desde cero, tarda más, pero el resultado es idéntico.
+Lo verifiqué de forma indirecta: la primera corrida del workflow (sin cache previo)
+y las siguientes (con cache) dieron el mismo resultado, solo que las siguientes
+corren más rápido.
+
+### Por qué construye con el Dockerfile en vez de compilar directo
+
+Porque así el pipeline verifica exactamente el mismo artefacto que después se
+publica y se corre en producción — el mismo `Dockerfile` que ya usamos en TP2 y
+TP3 para levantar el sistema. Si en cambio el workflow corriera `npm run build`
+suelto (como hacía la primera versión del pipeline, la de TP3), podría pasar que el
+build "a mano" funcionara pero el `Dockerfile` tuviera un problema propio (una
+etapa mal armada, una dependencia que falta en la imagen final) que solo se
+detectaría recién al invocar `docker build` — más tarde y en otro lugar. Construir
+con el Dockerfile en CI hace que ese sea el único camino de verdad, sin dos formas
+de "compilar" que puedan divergir entre sí.
+
+### El gate en acción: rojo → bloqueado → fix → verde
+
+Configuré `required_status_checks` en la protección de `main` exigiendo
+`build-backend` y `build-frontend`, con `strict: true` (la rama del PR tiene que
+estar actualizada contra `main` para poder mergear). Lo demostré en el
+[PR #21](https://github.com/danteferrer/ingsoft3-tp01/pull/21): rompí a propósito
+un import en `App.jsx` (`import x from './no-existe'`, el mismo ejemplo del
+enunciado) → `build-frontend` falló y GitHub marcó el PR como `BLOCKED`
+(confirmado con `gh pr view --json mergeStateStatus`, no solo mirando la UI) →
+un commit siguiente revirtió el import → los dos checks pasaron, el estado pasó a
+`CLEAN` → mergeé. El historial de las dos corridas (la que falló y la que pasó)
+queda visible en la pestaña Actions y en el propio PR.
+
+### Problemas encontrados y cómo los resolví
+
+1. **El primer pipeline (de TP3) no era el pipeline de TP4.** Lo que había armado
+   en TP3 solo corría `npm ci` y `npm run build`/chequeo de sintaxis — verificaba
+   que el código de Node compilara, pero nunca construía la imagen Docker. TP4 pide
+   específicamente que el pipeline construya con `docker/build-push-action`. Lo
+   resolví reescribiendo el workflow entero en vez de parchear el anterior.
+2. **`required_status_checks` no se podía actualizar con PATCH.** Al intentar
+   activar los checks obligatorios con un PATCH directo al endpoint de
+   `required_status_checks`, la API respondió 404 ("Required status checks not
+   enabled") porque esa protección específica nunca había estado activada. Lo
+   resolví mandando un PUT con la configuración completa de protección de rama
+   (preservando lo que ya había: cero aprobaciones, `enforce_admins`, sin force
+   push ni borrado), en vez de intentar parchear una pieza que todavía no existía.
+3. **El badge, si se escribe mal, no navega a ningún lado útil.** El formato
+   correcto es un link de dos partes: `[![CI](...badge.svg)](...actions/workflows/ci.yml)`
+   — la imagen sola sin el link exterior se ve igual mirando el README, pero al
+   clickearla no lleva al historial del workflow. Lo armé con las dos partes desde
+   el principio, usando la URL real del repo.
+
+### Declaración de uso de IA
+
+Usé Claude Code para escribir el workflow de CI (ambas versiones: la de TP3 y la
+reescritura real de TP4), configurar la protección de rama con los checks
+obligatorios vía la API de GitHub, y armar la demostración del gate (romper el
+import, abrir el PR, confirmar el bloqueo, arreglarlo, confirmar el desbloqueo y
+mergear).
+
+Verifiqué cada paso con comandos reales, no mirando solo la interfaz: confirmé que
+el check fallara de verdad con `gh pr checks`, confirmé que el merge estuviera
+bloqueado con `gh pr view --json mergeStateStatus` (no asumí que "se ve rojo" fuera
+lo mismo que "está bloqueado"), y confirmé que la corrida en `main` después de
+mergear terminara en verde con `gh run view`. La decisión de qué import romper y
+dónde (el ejemplo textual del enunciado, en el frontend) y la de reescribir el
+pipeline entero en vez de agregarle un tercer job al de TP3 las tomé yo.
