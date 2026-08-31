@@ -1,5 +1,7 @@
 # AutoColección
 
+[![CI](https://github.com/danteferrer/ingsoft3-tp01/actions/workflows/ci.yml/badge.svg)](https://github.com/danteferrer/ingsoft3-tp01/actions/workflows/ci.yml)
+
 Gestor de colección personal de autos. CRUD simple de autos y marcas: backend en
 Node/Express + Postgres, frontend en React + Vite, todo dockerizado (nginx sirve
 los estáticos del frontend y hace de proxy hacia el backend).
