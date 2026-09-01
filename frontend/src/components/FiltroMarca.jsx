@@ -1,7 +1,7 @@
 function FiltroMarca({ marcas, value, onChange }) {
   return (
-    <label>
-      Filtrar por marca:{' '}
+    <label className="filtro-marca">
+      Filtrar por marca
       <select value={value} onChange={(e) => onChange(e.target.value)}>
         <option value="">Todas</option>
         {marcas.map((marca) => (

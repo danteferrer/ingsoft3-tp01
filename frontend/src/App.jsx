@@ -16,19 +16,24 @@ function App() {
   }
 
   return (
-    <>
-      <h1>AutoColección</h1>
-      <FormularioAuto
-        auto={autoEditando}
-        onGuardado={handleGuardado}
-        onCancelar={autoEditando ? () => setAutoEditando(null) : undefined}
-      />
-      <ListaAutos
-        refreshSignal={refreshSignal}
-        onEditar={setAutoEditando}
-        onEliminado={refrescar}
-      />
-    </>
+    <div className="app">
+      <header className="app-header">
+        <h1>AutoColección</h1>
+        <p className="tagline">Los Santos Customs · Registro de vehículos</p>
+      </header>
+      <main className="app-main">
+        <FormularioAuto
+          auto={autoEditando}
+          onGuardado={handleGuardado}
+          onCancelar={autoEditando ? () => setAutoEditando(null) : undefined}
+        />
+        <ListaAutos
+          refreshSignal={refreshSignal}
+          onEditar={setAutoEditando}
+          onEliminado={refrescar}
+        />
+      </main>
+    </div>
   )
 }
 

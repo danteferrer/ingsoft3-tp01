@@ -29,6 +29,14 @@ const Auto = sequelize.define('Auto', {
     type: DataTypes.TEXT,
     allowNull: true,
   },
+  ultimoServicioFecha: {
+    type: DataTypes.DATEONLY,
+    allowNull: true,
+  },
+  ultimoServicioKm: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
 });
 
 Marca.hasMany(Auto, { foreignKey: 'marcaId' });
