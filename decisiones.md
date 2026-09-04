@@ -387,13 +387,21 @@ de gate en un stack con paso de build real, y en mi proyecto eso significaba
 romperlo específicamente en el frontend.
 
 **`strict: true` demostrado con dos PRs en paralelo:** además del PR #21, abrí
-dos PRs al mismo tiempo desde el mismo `main` para mostrar el otro caso que
-cubre `strict`. Mergeé el primero → `main` cambió. El segundo, que ya tenía sus
-checks en verde, pasó a mostrarse desactualizado (`mergeStateStatus` distinto de
-`CLEAN`) con el botón "Update branch" habilitado — la verificación en verde que
-tenía se había hecho contra un `main` que ya no existe, así que GitHub no la da
-por válida hasta que la rama se actualice y el pipeline vuelva a correr sobre la
-combinación real.
+dos PRs al mismo tiempo desde el mismo commit de `main`
+([#27](https://github.com/danteferrer/ingsoft3-tp01/pull/27) y
+[#28](https://github.com/danteferrer/ingsoft3-tp01/pull/28)) para mostrar el
+otro caso que cubre `strict`. Los dos llegaron a `CLEAN`. Mergeé el #27 →
+`main` cambió. El #28, que ya tenía sus checks en verde, pasó a
+`mergeable: CONFLICTING` — no solo "desactualizado": las dos ramas habían
+tocado el final del mismo archivo (`README.md`), así que además del chequeo
+vencido apareció un conflicto de merge real, con marcadores y todo (lo mismo
+que en TP1). Lo resolví igual que entonces: traje `main` a la rama del PR
+(`git merge origin/main`), edité el archivo para que quedaran las dos líneas
+en vez de una, y comiteé la resolución. Recién ahí el pipeline volvió a correr
+sobre la combinación real de las dos ramas, dio verde, el estado pasó a
+`CLEAN` de nuevo, y mergeé. La verificación vieja del #28 no valía nada apenas
+`main` cambió — tuvo que volver a probarse contra el `main` real antes de
+poder entrar.
 
 ### Problemas encontrados y cómo los resolví
 
