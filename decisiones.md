@@ -374,6 +374,27 @@ un commit siguiente revirtió el import → los dos checks pasaron, el estado pa
 `CLEAN` → mergeé. El historial de las dos corridas (la que falló y la que pasó)
 queda visible en la pestaña Actions y en el propio PR.
 
+**Por qué rompí el frontend y no el backend:** no es arbitrario — depende de si el
+stack tiene un paso de compilación/empaquetado real. El frontend (React + Vite)
+sí lo tiene: `npm run build` falla en el momento si hay un import roto, así que
+ese error aparece justo cuando `docker build` corre esa capa. El backend
+(Node/Express plano, sin bundler) no tiene ese paso — un `require`/`import` a un
+módulo inexistente ahí no rompe la imagen al construirla, porque nada la
+"compila" de verdad; recién fallaría al **ejecutar** el contenedor
+(`docker run`), que es un momento distinto y no lo que el gate de CI verifica.
+Por eso el ejemplo del enunciado (un import roto) solo sirve como demostración
+de gate en un stack con paso de build real, y en mi proyecto eso significaba
+romperlo específicamente en el frontend.
+
+**`strict: true` demostrado con dos PRs en paralelo:** además del PR #21, abrí
+dos PRs al mismo tiempo desde el mismo `main` para mostrar el otro caso que
+cubre `strict`. Mergeé el primero → `main` cambió. El segundo, que ya tenía sus
+checks en verde, pasó a mostrarse desactualizado (`mergeStateStatus` distinto de
+`CLEAN`) con el botón "Update branch" habilitado — la verificación en verde que
+tenía se había hecho contra un `main` que ya no existe, así que GitHub no la da
+por válida hasta que la rama se actualice y el pipeline vuelva a correr sobre la
+combinación real.
+
 ### Problemas encontrados y cómo los resolví
 
 1. **El primer pipeline (de TP3) no era el pipeline de TP4.** Lo que había armado
