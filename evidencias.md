@@ -28,20 +28,13 @@ servicios arriba.
 ## 2. Prueba de persistencia (`down` vs. `down -v`)
 
 ![prueba de persistencia](img/tp2-persistencia.webp)
-Ciclo completo: cargo una marca (`Toyota`) → `docker compose down` (sin `-v`) →
-`up` → `curl /api/marcas` sigue devolviendo la marca → `docker compose down -v`
-→ `up` → `curl /api/marcas` devuelve `[]`. Confirma que el estado real de la
-aplicación vive únicamente en el volumen nombrado `db_data` — los contenedores
-de `backend` y `frontend` son descartables y recreables sin pérdida de datos;
-el de `db` también lo es, siempre que no se borre el volumen con `-v`.
+Cargo una marca (`Toyota`) → `down` (sin `-v`) → `up` → sigue estando → `down -v`
+→ `up` → desapareció. El estado real vive solo en el volumen `db_data`.
 
 ![detalle: falso negativo por timing](img/tp2-persistencia-detalle.webp)
-Durante esta misma prueba me crucé con el problema descrito en `decisiones.md`
-("Falsos negativos por timing al probar con `curl`"): justo después de un
-`up`, un `curl` devolvió `Connection reset by peer` a pesar de que los
-contenedores ya figuraban como `Started`/`Healthy` — el servidor todavía no
-había terminado de abrir el socket. Reintentar unos segundos después confirmó
-que el sistema funcionaba bien.
+Acá me crucé con el problema de timing de `decisiones.md`: un `curl` justo
+después del `up` dio `Connection reset by peer` aunque los contenedores ya
+figuraban `Healthy`. Reintentando unos segundos después, andaba bien.
 
 ## 3. Comparación de tamaño: imagen SDK vs. imagen final
 
@@ -50,19 +43,12 @@ que el sistema funcionaba bien.
 (265MB), `mi-frontend:v0.1.0` (93.1MB) y `node:22-alpine` (229MB), la imagen
 SDK usada en la etapa `build` de ambos Dockerfiles.
 
-- **Frontend**: la imagen final (93.1MB) es prácticamente igual a `nginx:alpine`
-  solo (93.6MB, verificado aparte con `docker pull nginx:alpine`). El SDK
-  completo de Node (229MB), usado en la etapa `build` para correr
-  `npm run build`, nunca llega a la imagen final — solo viajan los estáticos ya
-  compilados de `dist/` (unos pocos KB).
+- **Frontend**: la imagen final (93.1MB) es casi igual a `nginx:alpine` solo
+  (93.6MB) — el SDK de Node (229MB) nunca llega, solo los estáticos de `dist/`.
 - **Backend**: la imagen final (265MB) es más grande que `node:22-alpine` solo
-  (229MB), a diferencia del frontend, porque el backend sí necesita el runtime de
-  Node más `node_modules` de producción para correr. Acá la ganancia del
-  multi-stage no es de tamaño sino de contenido: gracias a
-  `npm prune --omit=dev` en la etapa de build, las devDependencies (`nodemon`)
-  nunca llegan a la imagen final. Es la diferencia frente a un lenguaje
-  compilado como .NET, donde el ahorro de tamaño entre SDK y runtime sí es
-  notorio.
+  (229MB), porque necesita `node_modules` de producción para correr. Acá la
+  ganancia no es de tamaño sino de contenido: `npm prune --omit=dev` saca las
+  devDependencies (`nodemon`) de la imagen final.
 
 ## 4. Imágenes publicadas en el registry, verificadas públicas
 
