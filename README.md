@@ -75,6 +75,3 @@ ingsoft3-tp01/
 | POST   | /api/autos      | Crea un auto                                     |
 | PUT    | /api/autos/:id  | Actualiza un auto                                |
 | DELETE | /api/autos/:id  | Elimina un auto                                  |
-
-<!-- demo strict: PR A -->
-<!-- demo strict: PR B -->
