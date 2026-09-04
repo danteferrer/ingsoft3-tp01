@@ -225,6 +225,25 @@ se agrega un scanner que directamente bloquea el push si detecta un secreto.
    recreó), pero fue una buena lección sobre cómo Compose nombra sus recursos: conviene
    clonar pruebas de este tipo en una carpeta con nombre distinto, o usar la opción
    `-p <nombre>` de compose para fijar explícitamente el nombre del proyecto.
+8. **Ambos contenedores corrían como `root` por defecto, y arreglarlo rompió las
+   imágenes ya publicadas.** Ninguno de los dos Dockerfiles fijaba un `USER`, así que
+   los procesos quedaban corriendo como root dentro del contenedor (verificado con
+   `docker exec ... whoami` → `root`). En el backend alcanzó con agregar `USER node`
+   (usuario que ya viene creado en la imagen base `node:22-alpine`). En el frontend no
+   fue tan directo: nginx por defecto necesita root para escuchar en el puerto 80 y
+   para escribir en `/var/cache/nginx` y `/var/run/nginx.pid`. El primer intento
+   (agregar solo `USER nginx`) construyó bien la imagen pero **falló al correrla**, con
+   `mkdir() "/var/cache/nginx/client_temp" failed (13: Permission denied)` — un error
+   que solo aparece corriendo el contenedor, no en el `docker build`. Lo resolví
+   cambiando el puerto de escucha a uno no privilegiado (8080) y agregando un `chown`
+   explícito de esos directorios *antes* de bajar a `USER nginx`. Como consecuencia
+   directa, las imágenes que ya estaban publicadas en `ghcr.io` como `v0.1.0` quedaron
+   desactualizadas: seguían escuchando internamente en el puerto 80 mientras
+   `docker-compose.registry.yml` ya mapeaba `3000:8080`, así que el frontend quedaba
+   inalcanzable (`curl` devolvía `HTTP 000`). Publiqué una versión `v0.1.1` de ambas
+   imágenes con las correcciones y actualicé el compose de registry para apuntar a esa
+   versión, verificando de nuevo que fueran públicas con un `docker pull` sin sesión
+   iniciada.
 
 ### Declaración de uso de IA
 
