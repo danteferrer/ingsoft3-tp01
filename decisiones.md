@@ -151,6 +151,26 @@ recién cuando el contenedor de `db` existe, sino cuando su `healthcheck` ya dio
 Sin el `healthcheck`, `depends_on` a secas solo garantiza orden, no que el servicio
 del que dependés ya pueda responder.
 
+**Dónde viven los secretos:**
+
+Lo único realmente secreto de este proyecto es `DB_PASSWORD`. Vive en `backend/.env`
+y en el `.env` de la raíz (los dos gitignored), y llega al compose y al backend como
+variable de entorno (`${DB_PASSWORD}`). Lo que sí se commitea es `.env.example`, con
+un valor de ejemplo (`super-secreto-local`) que documenta qué variable hace falta,
+sin exponer ninguna contraseña real. El resto de la configuración de conexión
+(`DB_NAME`, `DB_USER`, `DB_HOST`, `DB_PORT`) no es secreta, así que queda fija
+directamente en el compose — no tiene sentido esconder algo que no compromete nada
+si se ve.
+
+Por qué importa tanto: mi repo es público (requisito de la materia), así que
+cualquier valor commiteado ahí queda expuesto para siempre, aunque lo borre en un
+commit posterior — sigue en el historial de Git, navegable por cualquiera. Hay bots
+recorriendo GitHub 24/7 buscando exactamente ese patrón (credenciales committeadas
+por error); no es un riesgo teórico. La disciplina de no commitear `.env` empieza
+acá y sigue: en TP4 estos secretos se mudan a la configuración cifrada de GitHub
+Actions (para cuando el pipeline necesite hablar con un servicio externo), y en TP9
+se agrega un scanner que directamente bloquea el push si detecta un secreto.
+
 ### Problemas encontrados y cómo los resolví
 
 1. **Pérdida de trabajo por confusión de carpetas de trabajo.** En un momento del TP, el
@@ -336,6 +356,19 @@ Lo que **no** comparten entre sí: el filesystem del runner (cada job arranca en
 máquina limpia y hace su propio `checkout`), y el cache de capas de Docker — cada
 uno usa su propio `scope` (`backend` / `frontend`) precisamente para no pisarse.
 
+**Por qué dos triggers (`pull_request` y `push`), no uno solo:**
+
+Cada uno cumple un propósito distinto y ninguno reemplaza al otro. `pull_request`
+corre **antes** del merge, sobre un merge de prueba que arma GitHub al vuelo (mi
+rama combinada con `main`) — es el que realmente frena algo, ataja el error antes
+de que contamine `main`. `push` a `main` corre **después**, cuando ya es tarde
+para frenar nada, pero cumple dos funciones distintas: alimenta el badge (que
+siempre lee la última corrida de `main`), y deja el cache de capas guardado en
+`main` para que lo aprovechen todos los PRs que arranquen desde ahí después — un
+PR solo puede leer el cache de su propia rama y el de la rama a la que apunta, así
+que si `main` nunca corriera con `push`, ningún PR nuevo tendría cache de dónde
+partir.
+
 ### Qué cachea, y qué pasa si el cache desaparece
 
 Cachea las capas de la imagen Docker de cada etapa del build (`cache-from`/
@@ -348,6 +381,16 @@ reconstruye todas las capas desde cero, tarda más, pero el resultado es idénti
 Lo verifiqué de forma indirecta: la primera corrida del workflow (sin cache previo)
 y las siguientes (con cache) dieron el mismo resultado, solo que las siguientes
 corren más rápido.
+
+Esas dos líneas de cache no alcanzan solas: necesitan `docker/setup-buildx-action`
+un paso antes. El constructor de Docker que viene de fábrica guarda las capas
+puertas adentro del propio runner y no sabe exportarlas a ningún lado — como el
+runner se destruye al terminar la corrida, guardarlas ahí no serviría de nada.
+Buildx es el que sabe mandar las capas al almacén de GitHub Actions (`type=gha`)
+y traerlas de vuelta. Si falta ese paso, el build ni arranca: falla con un error
+que dice explícitamente que el constructor de fábrica no sabe exportar cache —
+uno de los pocos errores que te dicen exactamente qué falta, en vez de dejarte
+adivinando.
 
 ### Por qué construye con el Dockerfile en vez de compilar directo
 
