@@ -77,3 +77,4 @@ ingsoft3-tp01/
 | DELETE | /api/autos/:id  | Elimina un auto                                  |
 
 <!-- demo strict: PR A -->
+<!-- demo strict: PR B -->
