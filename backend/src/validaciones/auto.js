@@ -54,10 +54,30 @@ function clasificarEstado(auto) {
   return 'usado';
 }
 
+function kilometrosHastaProximoService(auto) {
+  const INTERVALO = 10000;
+  if (auto.ultimoServicioKm == null) {
+    return INTERVALO - (auto.kilometraje % INTERVALO);
+  }
+  const recorridos = auto.kilometraje - auto.ultimoServicioKm;
+  if (recorridos < 0) {
+    return INTERVALO;
+  }
+  if (recorridos === 0) {
+    return INTERVALO;
+  }
+  const faltan = INTERVALO - (recorridos % INTERVALO);
+  if (faltan <= 500) {
+    return 0;
+  }
+  return faltan;
+}
+
 module.exports = {
   validarPatente,
   validarAnio,
   validarKilometraje,
   validarCamposAuto,
   clasificarEstado,
+  kilometrosHastaProximoService,
 };
