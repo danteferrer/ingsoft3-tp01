@@ -1,8 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import { validarPatente, validarAnio, validarKilometraje, validarCamposAuto } from './auto.js';
+
+const {
+  validarPatente,
+  validarAnio,
+  validarKilometraje,
+  validarCamposAuto,
+  clasificarEstado,
+} = require('./auto');
 
 describe('validarPatente', () => {
-  it.each(['ABC123', 'AB123CD'])('acepta una patente válida (%s)', (patente) => {
+  it.each(['ABC123', 'AB123CD', 'ab123cd'])('acepta una patente válida (%s)', (patente) => {
     expect(validarPatente(patente).valida).toBe(true);
   });
 
@@ -16,6 +23,11 @@ describe('validarPatente', () => {
 describe('validarAnio', () => {
   it.each([1990, 2020])('acepta un año válido (%i)', (anio) => {
     expect(validarAnio(anio).valida).toBe(true);
+  });
+
+  it('acepta el año límite superior (actual + 1)', () => {
+    const actual = new Date().getFullYear();
+    expect(validarAnio(actual + 1).valida).toBe(true);
   });
 
   it('rechaza un año en el futuro', () => {
@@ -47,5 +59,25 @@ describe('validarCamposAuto', () => {
   it('junta un error por cada campo inválido presente', () => {
     const errores = validarCamposAuto({ patente: '123', anio: 1800, kilometraje: -5 });
     expect(errores).toHaveLength(3);
+  });
+});
+
+describe('clasificarEstado', () => {
+  const actual = new Date().getFullYear();
+
+  it('es "para revisar" cuando el kilometraje supera 150000', () => {
+    expect(clasificarEstado({ kilometraje: 200000, anio: actual })).toBe('para revisar');
+  });
+
+  it('es "antiguo" cuando el año tiene más de 10 años, con kilometraje normal', () => {
+    expect(clasificarEstado({ kilometraje: 50000, anio: actual - 15 })).toBe('antiguo');
+  });
+
+  it('es "como nuevo" cuando el kilometraje es menor a 10000', () => {
+    expect(clasificarEstado({ kilometraje: 5000, anio: actual })).toBe('como nuevo');
+  });
+
+  it('es "usado" en el resto de los casos', () => {
+    expect(clasificarEstado({ kilometraje: 50000, anio: actual })).toBe('usado');
   });
 });
