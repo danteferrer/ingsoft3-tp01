@@ -255,3 +255,39 @@ de rama, y armar la demo del gate. Verifiqué cada paso con comandos reales
 (`gh pr checks`, `gh pr view --json mergeStateStatus`, `gh run view`), no
 solo mirando la interfaz. Las decisiones de qué romper y dónde, y de
 reescribir el pipeline en vez de parchearlo, las tomé yo.
+
+## TP5 — Testing y calidad
+
+**Qué testeo:** mi app no tenía reglas propias, así que agregué 3 al
+backend: patente con formato válido, año en rango razonable, kilometraje no
+negativo. Más la de patente duplicada (ya existía desde TP2), testeada con
+un mock. Uso Vitest en los dos lados.
+
+**Suite:** 8 tests en el backend (4 reglas), 9 en el frontend
+(`formatearUltimoService` + `api/autos.js` con `fetch` mockeado). En los dos
+lados hay un parametrizado, un caso de error y un mock.
+
+**Umbral:** 80% líneas / 70% ramas, en los dos lados. Hoy mido más que eso
+(backend 92/75, frontend 100/79), así que el umbral me frena si bajo, no es
+un número copiado.
+
+**Qué dejo afuera:** los controllers/API sin ninguna regla propia (solo
+CRUD) — igual que se excluye el arranque de una app.
+
+**Por qué cobertura alta no prueba nada:** un `validarKilometraje(5)` sin
+`expect` sube el número igual y no comprueba nada.
+
+**Rama sin cubrir:** `crearAuto` no testeaba el rechazo del backend. Entrada
+que la cubre: una respuesta de error (ej. patente inválida). La agregué.
+
+**Problemas que encontré:**
+1. `vi.mock` no interceptaba el modelo `Auto` porque el controller usa
+   `require`, no `import` → lo arreglé con `vi.spyOn`.
+2. Montar el volumen justo en `coverage/` rompía el contenedor (Docker no
+   deja borrar la raíz de un volumen) → el reporte va en una subcarpeta.
+3. `marcasController`/`marcas.js` sin reglas hundían el número → los saqué
+   de la cuenta.
+
+**Uso de IA:** trabajé con Claude Code en todo el práctico. Yo decidí qué
+reglas agregar y Claude escribió el código. Fui probando cada parte con
+comandos reales antes de seguir.
