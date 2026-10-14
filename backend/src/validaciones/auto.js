@@ -41,4 +41,23 @@ function validarCamposAuto(datos) {
   return errores;
 }
 
-module.exports = { validarPatente, validarAnio, validarKilometraje, validarCamposAuto };
+function clasificarEstado(auto) {
+  if (auto.kilometraje > 150000) {
+    return 'para revisar';
+  }
+  if (auto.anio < new Date().getFullYear() - 10) {
+    return 'antiguo';
+  }
+  if (auto.kilometraje < 10000) {
+    return 'como nuevo';
+  }
+  return 'usado';
+}
+
+module.exports = {
+  validarPatente,
+  validarAnio,
+  validarKilometraje,
+  validarCamposAuto,
+  clasificarEstado,
+};
