@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useState } from 'react'
 import { listarAutos, eliminarAuto } from '../api/autos'
 import { listarMarcas } from '../api/marcas'
+import { formatearUltimoService } from '../lib/formato'
 import FiltroMarca from './FiltroMarca'
 
 function ListaAutos({ refreshSignal, onEditar, onEliminado }) {
@@ -21,15 +22,6 @@ function ListaAutos({ refreshSignal, onEditar, onEliminado }) {
       .then(setAutos)
       .catch((err) => setError(err.message))
   }, [marcaId, refreshSignal])
-
-  function formatearUltimoService(auto) {
-    if (!auto.ultimoServicioFecha && !auto.ultimoServicioKm) return '—'
-    const fecha = auto.ultimoServicioFecha
-      ? new Date(auto.ultimoServicioFecha + 'T00:00:00').toLocaleDateString('es-AR')
-      : '—'
-    const km = auto.ultimoServicioKm != null ? `${auto.ultimoServicioKm.toLocaleString('es-AR')} km` : '—'
-    return `${fecha} · ${km}`
-  }
 
   async function handleEliminar(auto) {
     const confirmado = window.confirm(`¿Eliminar el auto con patente ${auto.patente}?`)
