@@ -1,5 +1,6 @@
 const Auto = require('../models/Auto');
 const Marca = require('../models/Marca');
+const { validarCamposAuto } = require('../validaciones/auto');
 
 function mensajeError(error) {
   if (error.errors?.length) {
@@ -34,6 +35,10 @@ async function obtener(req, res) {
 }
 
 async function crear(req, res) {
+  const errores = validarCamposAuto(req.body);
+  if (errores.length) {
+    return res.status(400).json({ error: errores.join(', ') });
+  }
   try {
     const auto = await Auto.create(req.body);
     res.status(201).json(auto);
@@ -43,6 +48,10 @@ async function crear(req, res) {
 }
 
 async function actualizar(req, res) {
+  const errores = validarCamposAuto(req.body);
+  if (errores.length) {
+    return res.status(400).json({ error: errores.join(', ') });
+  }
   try {
     const auto = await Auto.findByPk(req.params.id);
     if (!auto) {
