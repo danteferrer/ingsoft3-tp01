@@ -19,7 +19,7 @@ function App() {
     <div className="app">
       <header className="app-header">
         <h1>AutoColección</h1>
-        <p className="tagline">Los Santos Customs · Registro de vehículos</p>
+        <p className="tagline">Los Santos Customs · Registro de vehículos · v6.0.0</p>
       </header>
       <main className="app-main">
         <FormularioAuto
