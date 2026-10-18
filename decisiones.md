@@ -343,7 +343,12 @@ si es buen momento para tocar producción.
 
 **Letra chica del free tier:** Render duerme los servicios a los 15 min
 sin tráfico — el primer pedido después tarda hasta 1 min. Por eso el smoke
-reintenta (30 vueltas, 20s de espera) en vez de pedir una sola vez.
+reintenta (30 vueltas, 20s de espera) en vez de pedir una sola vez. Además,
+las 750 horas/mes del plan gratis son por workspace, compartidas entre mis
+4 servicios — si los dejara despiertos todo el tiempo (ej. con un ping para
+evitar el sleep) se agotarían antes de fin de mes. El build de cada deploy
+tarda unos minutos; no lo mide el pipeline, pero el smoke con reintentos
+lo tolera sin romperse.
 
 **Qué pierdo porque Render reconstruye en vez de correr mi imagen:**
 la imagen publicada en `ghcr.io` no es la que corre en QA/PROD — Render
