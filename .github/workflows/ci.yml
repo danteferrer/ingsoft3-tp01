@@ -155,8 +155,32 @@ jobs:
           echo "QA no respondio despues de los reintentos"
           exit 1
 
-  deploy-prod:
+  integracion:
     needs: [deploy-qa]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - name: Tests de integración contra la API de QA
+        working-directory: frontend
+        env:
+          API_BASE_URL: https://api-qa-dew8.onrender.com
+        run: npx playwright test e2e/api.spec.js
+      - name: Publicar reporte de integración
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-integracion
+          path: frontend/playwright-report
+
+  deploy-prod:
+    needs: [integracion]
     runs-on: ubuntu-latest
     environment: production
     env:
