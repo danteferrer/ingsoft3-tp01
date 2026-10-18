@@ -179,8 +179,36 @@ jobs:
           name: playwright-report-integracion
           path: frontend/playwright-report
 
-  deploy-prod:
+  e2e:
     needs: [integracion]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - run: npx playwright install --with-deps chromium
+        working-directory: frontend
+      - name: Tests e2e contra QA desplegado
+        working-directory: frontend
+        env:
+          E2E_BASE_URL: https://front-qa-5udf.onrender.com
+        run: npx playwright test e2e/autos.spec.js
+      - name: Publicar reporte e2e
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-e2e
+          path: frontend/playwright-report
+
+  deploy-prod:
+    needs: [e2e]
+    concurrency: deploy-prod
     runs-on: ubuntu-latest
     environment: production
     env:
