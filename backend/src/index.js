@@ -8,7 +8,7 @@ const app = express();
 app.use(express.json());
 
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', version: '6.1' });
+  res.json({ status: 'ok' });
 });
 
 app.use('/api/autos', autosRouter);
