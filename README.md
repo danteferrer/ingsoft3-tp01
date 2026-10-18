@@ -57,7 +57,7 @@ ingsoft3-tp01/
 │   │   ├── api/
 │   │   └── components/              (ListaAutos, FormularioAuto, FiltroMarca)
 │   ├── Dockerfile
-│   └── nginx.conf
+│   └── templates/default.conf.template  (nginx; BACKEND_URL por variable de entorno)
 ├── docker-compose.yml           # build local de las imágenes
 ├── docker-compose.registry.yml  # usa las imágenes publicadas en ghcr.io
 └── .env.example
