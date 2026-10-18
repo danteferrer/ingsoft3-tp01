@@ -6,6 +6,13 @@
 - Cadena: [PR con el login a GHCR salteado](https://github.com/danteferrer/ingsoft3-tp01/actions/runs/39133330335) · [corrida de `main` con "publicar" como último paso](https://github.com/danteferrer/ingsoft3-tp01/actions/runs/39133423938)
 - Entornos: [QA](https://front-qa-5udf.onrender.com) · [PROD](https://front-prod-pdou.onrender.com)
 
+## Enlaces de este TP (TP7)
+
+- Paquetes públicos (misma dirección que TP6, ahora con las etiquetas `sha-…` que ejecutan QA/PROD): [backend](https://github.com/danteferrer/ingsoft3-tp01/pkgs/container/ingsoft3-tp01-backend), [frontend](https://github.com/danteferrer/ingsoft3-tp01/pkgs/container/ingsoft3-tp01-frontend)
+- Corrida con integración **verde** y e2e **roja** (el commit que rompió la app, con los dos reportes como artifact): [run 39157385229](https://github.com/danteferrer/ingsoft3-tp01/actions/runs/39157385229) — commit [`96f70a8`](https://github.com/danteferrer/ingsoft3-tp01/commit/96f70a8)
+- Corrida completa en verde hasta producción (con el fix): [run 39157838829](https://github.com/danteferrer/ingsoft3-tp01/actions/runs/39157838829)
+- Entornos: [QA](https://front-qa-5udf.onrender.com) · [PROD](https://front-prod-pdou.onrender.com) (vivos hasta la defensa)
+
 ## TP1
 
 ### 1. Por qué Git no pudo resolver el conflicto solo
@@ -399,3 +406,97 @@ Claude — los pegué directo en la terminal) y aprobé/rechacé los deploys
 reales. Claude escribió el `ci.yml`, el Dockerfile y la plantilla de
 nginx, y verificó cada paso con comandos reales (`curl` contra las URLs
 públicas, consultas a la API de GitHub) antes de seguir.
+
+## TP7 — Contenedores en el pipeline + integración y e2e
+
+**Build once, deploy many:** en TP6, Render reconstruía mi app desde el
+repo en cada deploy — mismo commit, pero otra construcción (ej. una imagen
+base como `nginx:alpine` puede bajar una versión distinta entre un deploy
+y otro, sin que mi código cambie una letra). Ahora los 4 servicios
+ejecutan la imagen que el pipeline ya publicó, sin reconstruir nada — lo
+que QA probó es, bit a bit, lo que llega a producción.
+
+**Etiquetas:** `sha-<commit>` en el registry (la pega mi pipeline una sola
+vez, nadie más la mueve — por eso sirve para promover) y `v7.0.0` en git
+(el tag de cierre del práctico, no se elige). Nunca publico `:latest`
+porque ese rótulo cambia solo, en cada build de la imagen base — no
+identifica nada fijo. Los 4 servicios de Render quedaron configurados con
+la imagen del primer merge como punto de partida; de ahí en más, qué
+imagen corre lo decide cada deploy real del pipeline con `imgURL`, no esa
+config inicial.
+
+**Del tag a la imagen, en un paso:** `git rev-list -n1 v7.0.0` da el
+commit, y ese mismo `sha-<commit>` es la etiqueta publicada en mis dos
+paquetes — no hay que reconstruir nada para volver a esa versión.
+
+**Cómo se comprueba desde afuera que un entorno ejecuta mi imagen (y no
+una reconstrucción):** en *Events* de cada servicio de Render (no es
+público, se muestra en vivo en la defensa) — el deploy tiene que decir
+"Triggered via Deploy Hook" y nombrar el `sha-<commit>` de la corrida, no
+un mensaje de commit (que es lo que aparece cuando Render compila solo).
+El smoke test **no** prueba esto: solo pregunta si el entorno responde —
+si un deploy falla, el servicio sigue sirviendo la versión anterior y el
+smoke da verde igual.
+
+**Integración vs. e2e, por qué no es lo mismo:** la integración
+(`frontend/e2e/api.spec.js`, fixture `request`, sin navegador) le habla a
+la API de QA directo — prueba que la API y la base están sanas. La e2e
+(`frontend/e2e/autos.spec.js`, navegador real) usa la pantalla como una
+persona — prueba que la app funciona de punta a punta. Son la **amplia**,
+no la estrecha (TP5 no levanta nada en memoria): uso la QA ya desplegada
+porque la cadena ya está armada — gana que prueba contra la config real,
+pierde que depende de que QA esté arriba.
+
+**El par que diagnostica (visto en vivo, con la demo):** rompí el payload
+del formulario (mandaba `patente_` en vez de `patente`) y mergeé. En esa
+corrida: integración **verde** (le habla a la API con el nombre correcto,
+sin pasar por el front roto) y e2e **roja** (la única que usa la pantalla
+real). Eso solo ya dice dónde está el problema — el front, no la API —
+sin abrir el código. Si hubiera roto la API, habría sido al revés:
+integración roja, y la e2e ni corre (`needs: integracion`).
+
+**Qué dejé afuera de cada suite:** en integración, nada de levantar una
+base en memoria ni mockear la API — eso ya lo hice en TP5 con el unitario
+que probó `validarCamposAuto` con un doble. En e2e, solo 3 flujos
+(creación+borrado, patente inválida, persistencia tras recargar) — no
+repito ahí lo que ya prueban los unitarios de TP5, y dejo afuera flujos de
+edición o filtro porque no son los que un usuario usaría todos los días.
+
+**Cold start en las e2e:** `timeout: 60000` por test y `retries: 1` en CI
+(`playwright.config.js`) — si un test pasa recién en el reintento, el
+reporte lo marca *flaky* y lo reviso, no lo dejo pasar sin mirar. Ya lo vi
+en vivo: la primera corrida local falló por completo porque QA tardó en
+responder justo al cargar la página (`"Error al obtener marcas"`); con QA
+despierto, los mismos 3 tests pasaron en 17s.
+
+**Misma imagen del front en QA y PROD:** `BACKEND_URL` y `DNS_RESOLVER`
+son variables del servicio (TP6), nunca quedan adentro de la imagen — por
+eso una sola imagen de frontend sirve en los dos entornos, cambiando solo
+esas dos variables.
+
+**Problemas encontrados:**
+1. Mi primer `read -rs HOOK` para el deploy manual de `front-prod` devolvió
+   `Not Found` — corrí el comando dos veces seguidas sin limpiar la
+   variable y terminé usando un valor mezclado. Se resolvió copiando el
+   hook de nuevo, fresco, y corriendo todo en un bloque limpio.
+2. Al escribir el test de integración, usé `E2E_BASE_URL` como `baseURL`
+   global en `playwright.config.js` — pero integración necesita
+   `API_BASE_URL`, una dirección distinta. Daba `Invalid URL` en los tres
+   tests. Lo resolví armando la URL completa adentro del spec de
+   integración en vez de depender de un `baseURL` único para las dos
+   suites.
+3. Verifiqué el fix del bug de `patente_` corriendo la e2e contra QA
+   **antes** de mergear — y seguía fallando, porque el fix solo estaba en
+   mi máquina, no en lo que QA tenía desplegado. La e2e prueba el entorno
+   real, no mi código local: hay que mergear primero y recién ahí
+   verificar contra la corrida del pipeline.
+4. En un punto commiteé directo a `main` local por olvidarme de crear la
+   rama antes de empezar a trabajar — lo detecté con `git status` antes
+   de pushear nada, y lo resolví moviendo el commit a una rama nueva y
+   reseteando `main` local a `origin/main`, sin perder el trabajo.
+
+**Uso de IA:** trabajé con Claude Code en todo el práctico. Yo decidí qué
+campo romper para la demo del gate y aprobé/rechacé cada deploy real.
+Claude escribió los tests de integración y e2e, el Dockerfile y el
+`ci.yml`, y verificó cada paso contra el QA real (nunca contra un doble)
+antes de dar una tarea por cerrada.
