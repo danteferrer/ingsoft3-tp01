@@ -268,7 +268,7 @@ un mock. Uso Vitest en los dos lados.
 lados hay un parametrizado, un caso de error y un mock.
 
 **Umbral:** 80% líneas / 70% ramas, en los dos lados. Hoy mido más que eso
-(backend 92/75, frontend 100/79), así que el umbral me frena si bajo, no es
+(backend 100/90, frontend 100/79), así que el umbral me frena si bajo, no es
 un número copiado.
 
 **Qué dejo afuera:** los controllers/API sin ninguna regla propia (solo
@@ -280,14 +280,30 @@ CRUD) — igual que se excluye el arranque de una app.
 **Rama sin cubrir:** `crearAuto` no testeaba el rechazo del backend. Entrada
 que la cubre: una respuesta de error (ej. patente inválida). La agregué.
 
+**PR bloqueado (la demostración):**
+- Secuencia completa (rojo por cobertura → tests que faltaban → verde →
+  merge): [PR #38](https://github.com/danteferrer/ingsoft3-tp01/pull/38).
+- El freno vigente, abierto en rojo hasta la defensa:
+  [PR #39](https://github.com/danteferrer/ingsoft3-tp01/pull/39).
+- Corrida roja con el número exacto en el log:
+  [run 38612976340](https://github.com/danteferrer/ingsoft3-tp01/actions/runs/38612976340)
+  (`ERROR: Coverage for lines (72.72%) does not meet global threshold (80%)`).
+- Resumen de cobertura visible + reporte descargable:
+  [run 38611355829](https://github.com/danteferrer/ingsoft3-tp01/actions/runs/38611355829).
+
 **Problemas que encontré:**
-1. `vi.mock` no interceptaba el modelo `Auto` porque el controller usa
-   `require`, no `import` → lo arreglé con `vi.spyOn`.
-2. Montar el volumen justo en `coverage/` rompía el contenedor (Docker no
+1. Mezclar `import` y `require` para el mismo módulo (`auto.js`) entre dos
+   archivos de test partía la cobertura en dos instancias distintas — lo
+   descubrí comparando correr un archivo solo vs. los dos juntos. Se
+   resolvió usando `require` consistente en los dos.
+2. `vi.mock` no interceptaba el modelo `Auto` en el controller → lo
+   arreglé con `vi.spyOn` sobre el objeto real.
+3. Montar el volumen justo en `coverage/` rompía el contenedor (Docker no
    deja borrar la raíz de un volumen) → el reporte va en una subcarpeta.
-3. `marcasController`/`marcas.js` sin reglas hundían el número → los saqué
+4. `marcasController`/`marcas.js` sin reglas hundían el número → los saqué
    de la cuenta.
 
 **Uso de IA:** trabajé con Claude Code en todo el práctico. Yo decidí qué
 reglas agregar y Claude escribió el código. Fui probando cada parte con
-comandos reales antes de seguir.
+comandos reales antes de seguir, y de paso fuimos mirando las clases de la
+cátedra para no desviarnos de lo que pedía la guía.
