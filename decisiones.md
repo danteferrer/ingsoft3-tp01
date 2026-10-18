@@ -500,3 +500,38 @@ campo romper para la demo del gate y aprobé/rechacé cada deploy real.
 Claude escribió los tests de integración y e2e, el Dockerfile y el
 `ci.yml`, y verificó cada paso contra el QA real (nunca contra un doble)
 antes de dar una tarea por cerrada.
+
+## TP8 — Infraestructura como código
+
+**Riel y versiones:** Terraform ≥1.5, providers `kislerdm/neon` 0.18.0 y
+`render-oss/render` 1.9.1 (fijados, no "el último"). Un solo módulo
+(`infra/`) declara un entorno nuevo, `preprod`: proyecto+rol+base en Neon
+y los 2 servicios web de Render corriendo la imagen ya publicada en TP7
+(`sha-<commit>`), sin tocar QA ni PROD — ninguno de los dos está declarado
+en este `.tf`, así que Terraform no puede gestionarlos aunque quisiera.
+
+**Problemas encontrados:**
+1. El guion no menciona `org_id` como atributo de `neon_project` — mi
+   cuenta de Neon lo pide igual. Lo encontré con el 400 real de la API y
+   confirmé que existía corriendo `terraform providers schema -json`
+   sobre el provider.
+2. Dos veces dejé una API key como el placeholder literal del ejemplo
+   (`NEON_API_KEY`/`RENDER_API_KEY` con el texto `"..."`) en vez de la
+   real. Lo detecté chequeando el largo de la variable (`${#VAR}` daba 3)
+   antes de sospechar de otra cosa.
+3. `RENDER_OWNER_ID` tampoco estaba seteada (quedó el ejemplo literal
+   `usr-... (o tea-...)`). La conseguí con `curl` a `/v1/owners` en vez de
+   buscarla a mano en el dashboard.
+4. El ciclo completo anda: `destroy` (5 recursos, en el orden inverso al
+   de creación: front → api → base → rol → proyecto) y después `apply`
+   recrea `preprod` igual por fuera (mismas URLs de Render) aunque por
+   adentro sea un proyecto de Neon nuevo. QA y PROD quedaron arriba todo
+   el tiempo (confirmado con `curl` a los dos). `prevent_destroy` sobre
+   `neon_database.preprod` frenó un `destroy` real, nombrando el recurso
+   y la línea exacta del `.tf`.
+
+**Declaración de uso de IA:** trabajé con Claude Code en todo el
+práctico. Las API keys de Neon/Render y el `org_id` los generé y pegué yo
+mismo en mi propia terminal — nunca se los pasé a Claude como texto.
+Claude escribió los `.tf` y verificó cada paso con comandos reales (curl
+contra las URLs de preprod, QA y PROD) antes de dar la tarea por cerrada.
