@@ -58,7 +58,7 @@ function FormularioAuto({ auto, onGuardado, onCancelar }) {
       marcaId: form.marcaId ? Number(form.marcaId) : null,
       modelo: form.modelo,
       anio: Number(form.anio),
-      patente_: form.patente,
+      patente: form.patente,
       color: form.color,
       kilometraje: form.kilometraje ? Number(form.kilometraje) : 0,
       notas: form.notas || null,
