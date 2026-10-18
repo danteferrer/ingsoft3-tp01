@@ -13,6 +13,7 @@ export default defineConfig({
     },
   },
   test: {
+    exclude: ['**/node_modules/**', 'e2e/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'json-summary'],
