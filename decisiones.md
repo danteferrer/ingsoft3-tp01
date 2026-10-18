@@ -1,5 +1,11 @@
 # Decisiones — TP1
 
+## Enlaces de este TP (TP6)
+
+- Paquetes públicos: [backend](https://github.com/danteferrer/ingsoft3-tp01/pkgs/container/ingsoft3-tp01-backend), [frontend](https://github.com/danteferrer/ingsoft3-tp01/pkgs/container/ingsoft3-tp01-frontend)
+- Cadena: [PR con el login a GHCR salteado](https://github.com/danteferrer/ingsoft3-tp01/actions/runs/39133330335) · [corrida de `main` con "publicar" como último paso](https://github.com/danteferrer/ingsoft3-tp01/actions/runs/39133423938)
+- Entornos: [QA](https://front-qa-5udf.onrender.com) · [PROD](https://front-prod-pdou.onrender.com)
+
 ## TP1
 
 ### 1. Por qué Git no pudo resolver el conflicto solo
@@ -307,3 +313,84 @@ que la cubre: una respuesta de error (ej. patente inválida). La agregué.
 reglas agregar y Claude escribió el código. Fui probando cada parte con
 comandos reales antes de seguir, y de paso fuimos mirando las clases de la
 cátedra para no desviarnos de lo que pedía la guía.
+
+## TP6 — CD: environments, aprobaciones y deployment patterns
+
+**El artefacto:** el pipeline publica las dos imágenes a `ghcr.io` solo en
+push a `main`, con tag `sha-<commit>` (nunca `:latest`). No hay ningún
+`if` que diga "si pasó, publicá": publicar es el último paso del mismo job
+que testea, así que si los tests fallan, el job muere antes de llegar ahí.
+Si se publicara igual (aunque fallen los tests), el registry dejaría de
+significar "esto está verificado" — sería solo "esto compiló en algún
+momento".
+
+**Continuous Delivery, no Deployment:** todo cambio verificado llega solo
+a QA, pero a producción solo con un click humano. Elegí Delivery porque mi
+suite y mi monitoreo hoy no me dan la confianza para sacar al humano —
+si algo rompe en producción sin que nadie mire antes, no tengo forma de
+enterarme rápido.
+
+**La cadena:** `build-backend`/`build-frontend` → `deploy-qa` (`needs` los
+dos builds, `if` de rama `main`, `environment: qa`) → `deploy-prod`
+(`needs: [deploy-qa]`, `environment: production`, sin `if` propio —lo
+hereda de `deploy-qa`). Los secrets de cada entorno (`RENDER_HOOK_API_*`,
+`RENDER_HOOK_FRONT_*`) viven en su `environment`, no en el repo: un job
+que no declare `environment: production` ni siquiera puede leerlos.
+
+**Qué mira mi aprobador antes de aprobar:** que QA esté verde de verdad
+(abro la corrida, no solo miro el tilde), que el commit sea el esperado, y
+si es buen momento para tocar producción.
+
+**Letra chica del free tier:** Render duerme los servicios a los 15 min
+sin tráfico — el primer pedido después tarda hasta 1 min. Por eso el smoke
+reintenta (30 vueltas, 20s de espera) en vez de pedir una sola vez.
+
+**Qué pierdo porque Render reconstruye en vez de correr mi imagen:**
+la imagen publicada en `ghcr.io` no es la que corre en QA/PROD — Render
+vuelve a construir el mismo commit desde el repo. Puede salir distinta de
+la que publiqué y verifiqué. Es a propósito (TP7 lo resuelve); lo
+documento como límite, no lo escondo.
+
+**Qué prueba mi smoke test y qué no:** lo viví en vivo haciendo el
+ejercicio de aprobación — aprobé un deploy, el smoke dio verde, y
+`/health` siguió devolviendo la versión vieja varios segundos más
+(Render todavía estaba construyendo). El smoke prueba que el entorno
+**contesta**, no qué versión contesta: mientras Render reconstruye, sigue
+sirviendo la anterior y el smoke no se entera.
+
+**Pattern para una producción real + rollback:** elegiría **blue-green**
+para esta app — es simple de razonar (dos entornos completos, un switch),
+da rollback en segundos, y el costo extra (2x infraestructura) es barato
+para una app chica como esta. Canary pediría métricas que hoy no tengo
+(TP9), y feature flags es más trabajo del que esta app necesita por
+ahora.
+
+Mi plan de rollback actual: re-pegarle al mismo deploy hook con el SHA de
+la release anterior (`&ref=<sha>`). Lo probé de verdad: disparé el
+rollback a `v6.0.0` y medí con `curl` en loop cuánto tardaba `/health` en
+dejar de mostrar la versión nueva — **≤15 segundos** (sondeado cada 15s;
+salió tan rápido porque Render ya tenía esa build cacheada de un deploy
+anterior reciente). El rollback de código no deshace datos: si hubiera
+corrido una migración destructiva, esa parte no vuelve con esto.
+
+**Problemas encontrados:**
+1. Al cargar los secrets de los environments, se me cortó el `--env qa`
+   del segundo comando dos veces seguidas (una vez en QA, otra en PROD) —
+   el secret quedaba en el repo en vez del environment, donde el job no lo
+   puede leer. Lo detecté con `gh secret list --env qa` (no aparecía) y lo
+   resolví borrando y recargando con el flag completo.
+2. Al primer intento, pegué el deploy hook de `api-prod` en el secret de
+   `RENDER_HOOK_API_QA` por confundir de qué pestaña de Render estaba
+   copiando — lo encontré porque pregunté antes de usarlo, no porque algo
+   fallara solo. Lo resolví borrando el secret y recargándolo con cuidado
+   de confirmar el nombre del servicio antes de copiar.
+3. El environment `production` venía con "Allow administrators to bypass
+   configured protection rules" tildado — como soy admin del repo, podría
+   saltearme mi propia aprobación. Lo destildé para que el gate sea real.
+
+**Uso de IA:** trabajé con Claude Code en todo el práctico. Yo creé las
+cuentas de Neon y Render, cargué los secrets a mano (nunca se los pasé a
+Claude — los pegué directo en la terminal) y aprobé/rechacé los deploys
+reales. Claude escribió el `ci.yml`, el Dockerfile y la plantilla de
+nginx, y verificó cada paso con comandos reales (`curl` contra las URLs
+públicas, consultas a la API de GitHub) antes de seguir.
