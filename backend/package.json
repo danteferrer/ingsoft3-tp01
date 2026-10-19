@@ -15,7 +15,7 @@
   "type": "commonjs",
   "dependencies": {
     "@sentry/node": "^11.8.0",
-    "dotenv": "^17.4.2",
+    "dotenv": "^18.0.8",
     "express": "^5.2.1",
     "pg": "^8.23.0",
     "pg-hstore": "^2.3.4",
