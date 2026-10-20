@@ -42,7 +42,7 @@ jobs:
 
       - name: Publicar reporte completo (backend)
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-backend
           path: coverage/backend/reporte
@@ -99,7 +99,7 @@ jobs:
 
       - name: Publicar reporte completo (frontend)
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-frontend
           path: coverage/frontend/reporte
@@ -179,7 +179,7 @@ jobs:
         run: npx playwright test e2e/api.spec.js
       - name: Publicar reporte de integración
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-report-integracion
           path: frontend/playwright-report
@@ -208,7 +208,7 @@ jobs:
         run: npx playwright test e2e/autos.spec.js
       - name: Publicar reporte e2e
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-report-e2e
           path: frontend/playwright-report
