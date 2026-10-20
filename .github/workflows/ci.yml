@@ -124,6 +124,7 @@ jobs:
   deploy-qa:
     needs: [build-backend, build-frontend]
     if: github.ref == 'refs/heads/main'
+    concurrency: deploy-qa
     runs-on: ubuntu-latest
     environment: qa
     permissions:
