@@ -535,3 +535,42 @@ práctico. Las API keys de Neon/Render y el `org_id` los generé y pegué yo
 mismo en mi propia terminal — nunca se los pasé a Claude como texto.
 Claude escribió los `.tf` y verificó cada paso con comandos reales (curl
 contra las URLs de preprod, QA y PROD) antes de dar la tarea por cerrada.
+
+## TP9 — DevSecOps + Observabilidad
+
+**Qué actualizaba el PR de Dependabot que mergeé y por qué:** `express`
+5.2.1 → 5.3.0 (bump de *minor*, sin breaking changes según el changelog).
+Lo mergeé con confianza porque corrige la vulnerabilidad **crítica**
+(`proxy-addr`, CVE-2026-90711) y dos `qs` de severidad media, y porque el
+pipeline corrió verde sobre el cambio (tests + cobertura + e2e).
+
+**Monitor y Sentry:** el monitor (UptimeRobot, sobre `/health` de PROD)
+tardó **5 minutos y 5 segundos** en avisar la caída que provoqué a
+propósito (DOWN → UP). En Sentry, la operación más usada y más lenta a
+la vez fue **GET**, con P95 de 567.80ms — probablemente el cold start de
+Render después del sleep del free tier, el mismo fenómeno de TP6/TP7
+visto desde otro ángulo. De ahí nació la tarjeta
+[#76](https://github.com/danteferrer/ingsoft3-tp01/issues/76).
+
+**Problemas encontrados:**
+1. CodeQL marcó `actions/missing-workflow-permissions` en 4 jobs del
+   pipeline (`deploy-qa`, `integracion`, `e2e`, `deploy-prod`) apenas lo
+   activé — ninguno declaraba permisos y corrían con los del repo por
+   default. Les agregué `contents: read` a los 4 (ninguno escribe nada).
+2. Sentry no nombra las transacciones del backend por ruta (columna
+   *Transaction* vacía, solo agrupa por método HTTP) — probablemente la
+   instrumentación automática de Express todavía no cubre bien Express 5
+   (recién salido). Las 3 preguntas (qué falla/tarda/se usa) igual se
+   contestan, con menos granularidad de la que muestra el ejemplo de la
+   guía.
+3. Un deploy a producción quedó esperando aprobación sin que lo notara
+   (se mezcló con el trabajo de TP8) y, por la concurrencia de a uno en
+   `deploy-prod`, bloqueó los siguientes hasta que lo aprobé.
+
+**Declaración de uso de IA:** trabajé con Claude Code en todo el
+práctico. Yo creé las cuentas de UptimeRobot y Sentry, provoqué la caída
+real en Render, y aprobé cada deploy a producción. Claude instrumentó
+Sentry en el código, activó las 3 protecciones por API, analizó el PR de
+Dependabot antes de mergearlo, y verificó cada paso contra producción
+real (curl, el mail de la caída, los datos de Sentry) antes de dar una
+tarea por cerrada.
