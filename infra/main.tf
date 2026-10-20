@@ -78,7 +78,7 @@ resource "render_web_service" "front" {
   }
 
   env_vars = {
-    BACKEND_URL  = { value = render_web_service.api.url } # se deriva, no se copia
-    DNS_RESOLVER = { value = "8.8.8.8" }
+    BACKEND_URL    = { value = render_web_service.api.url } # se deriva, no se copia
+    NGINX_RESOLVER = { value = "8.8.8.8" }                  # el nombre que usa frontend/templates/default.conf.template
   }
 }

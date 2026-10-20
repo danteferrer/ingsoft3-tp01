@@ -29,6 +29,7 @@ function validarCamposAuto(datos) {
   if (datos.patente !== undefined) {
     const r = validarPatente(datos.patente);
     if (!r.valida) errores.push(r.error);
+    else datos.patente = datos.patente.toUpperCase();
   }
   if (datos.anio !== undefined) {
     const r = validarAnio(datos.anio);
