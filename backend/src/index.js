@@ -21,12 +21,6 @@ app.get('/health', (req, res) => {
 app.use('/api/autos', autosRouter);
 app.use('/api/marcas', marcasRouter);
 
-// Endpoint temporal para refrescar el error de Sentry antes del recuperatorio.
-// Se saca apenas se confirme que quedo visible en el panel.
-app.get('/api/falla', () => {
-  throw new Error('Falla de prueba del TP9 (refresco pre-recu)');
-});
-
 Sentry.setupExpressErrorHandler(app);
 
 const PORT = process.env.PORT || 8080;
